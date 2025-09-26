@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from PIL import Image, ImageDraw, ImageFont
 
 TOKEN = "8365532605:AAGpYT5-XQMCFxx6jdzBxOuX9RM1eDACuRY"
-ALLOWED_USERS = [989134238719] # آیدی عددی تلگرام خودت و دوستانت
+ALLOWED_USERS = [6059296496] # آیدی عددی تلگرام خودت و دوستانت
 
 # مراحل گفتگو
 DATE, DEST, PRODUCT = range(3)
@@ -35,9 +35,9 @@ async def get_product(update: Update, context):
 context.user_data["product"] = update.message.text
 
 # باز کردن تمپلیت
-img = Image.open("template.jpg")
+img = Image.open("templates/template.png")
 draw = ImageDraw.Draw(img)
-font = ImageFont.truetype("B Nazanin.ttf", 40)
+font = ImageFont.truetype("fonts/IRANSansXFaNum-LightD4.ttf", 40)
 
 # درج متن‌ها (مختصات تقریبی)
 draw.text((150, 50), f"تاریخ بارگیری: {
