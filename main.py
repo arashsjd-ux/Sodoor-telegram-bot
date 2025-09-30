@@ -1,12 +1,29 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler
 from PIL import Image, ImageDraw, ImageFont
+import arabic_reshaper
+from bidi.algorithm import get_display
 
 TOKEN = "8365532605:AAGpYT5-XQMCFxx6jdzBxOuX9RM1eDACuRY"
 ALLOWED_USERS = [6059296496]  # آیدی عددی تلگرام خودت و دوستانت
 
 # مراحل گفتگو
 DATE, DEST, PRODUCT = range(3)
+
+# تابع برای راست‌چین کردن متن فارسی
+def reshape_rtl(text):
+    reshaped_text = arabic_reshaper.reshape(text)   # حروف رو درست می‌کنه
+    bidi_text = get_display(reshaped_text)          # راست به چپ می‌کنه
+    return bidi_text
+
+# تابع کمکی برای نوشتن متن راست‌چین
+def draw_text_rtl(draw, position, text, font, fill, box_width):
+    # طول متن
+    text_width, _ = draw.textsize(text, font=font)
+    # جابجایی برای راست‌چین کردن
+    x, y = position
+    x = x + box_width - text_width
+    draw.text((x, y), text, font=font, fill=fill)
 
 # شروع ربات
 async def start(update: Update, context):
@@ -37,12 +54,19 @@ async def get_product(update: Update, context):
     # باز کردن تمپلیت
     img = Image.open("templates/template.png")
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("fonts/IRANSansXFaNum-LightD4.ttf", 40)
+    font = ImageFont.truetype("fonts/IRANSansXFaNum-LightD4.ttf", 48)
 
-    # درج متن‌ها (مختصات تقریبی)
-    draw.text((150, 50), f"تاریخ بارگیری: {context.user_data['date']}", font=font, fill="navy")
-    draw.text((150, 150), f"مقصد: {context.user_data['dest']}", font=font, fill="navy")
-    draw.text((150, 250), f"نوع فرآورده: {context.user_data['product']}", font=font, fill="navy")
+    # آماده‌سازی متن‌ها
+    date_text = reshape_rtl(f"تاریخ بارگیری: {context.user_data['date']}")
+    dest_text = reshape_rtl(f"مقصد: {context.user_data['dest']}")
+    product_text = reshape_rtl(f"نوع فرآورده: {context.user_data['product']}")
+
+    # راست‌چین روی کادر به عرض 1000 پیکسل
+    box_width = 1000  
+
+    draw_text_rtl(draw, (150, 50), date_text, font, "navy", box_width)
+    draw_text_rtl(draw, (150, 150), dest_text, font, "navy", box_width)
+    draw_text_rtl(draw, (150, 250), product_text, font, "navy", box_width)
 
     img.save("output.jpg")
 
