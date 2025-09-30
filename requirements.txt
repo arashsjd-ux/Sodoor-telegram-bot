@@ -1,4 +1,6 @@
 python-telegram-bot==20.3
 Pillow==9.4.0
+arabic-reshaper
+python-bidi
 setuptools
 wheel
