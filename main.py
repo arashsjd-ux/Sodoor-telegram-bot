@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
-    # در محیط Render این متغیر باید تنظیم شده باشد
     logger.error("❌ توکن ربات پیدا نشد! مطمئن شو متغیر محیطی رو روی Render ست کردی.")
     TOKEN = "YOUR_FALLBACK_TOKEN"
 
@@ -23,40 +22,38 @@ if not TOKEN:
 # ⚙️ تنظیمات اصلی و مختصات (مهم‌ترین بخش برای ویرایش)
 # =========================================================================
 
-# ۱. افزودن کاربر جدید
+# ۱. لیست کاربران مجاز (شامل کاربر جدید 6433828400)
 ALLOWED_USERS = [6059296496, 6433828400]
 
-# ۲. تعریف تنظیمات برای هر خط
-FONT_PATH = "fonts/IRANSansXFaNum-LightD4.ttf" # مسیر فونت اصلی
+# ۲. تعریف مسیر فونت
+FONT_PATH = "fonts/IRANSansXFaNum-LightD4.ttf"
 
-# تعریف تنظیمات (مختصات، اندازه فونت و عرض باکس) برای هر خط
-# (X_Start: مختصات شروع نگارش از سمت چپ کادر متنی برای محاسبه RTL)
+# ۳. تنظیمات مختصات، اندازه فونت و رنگ برای هر خط
+# (توجه: با حذف bidi/reshaper، باید از فونتی استفاده کنید که به طور پیش‌فرض اتصال حروف خوبی داشته باشد)
 LINE_CONFIGS = {
     "date": {
         "text_prefix": "تاریخ بارگیری: ",
-        "x_start": 150, # مختصات X شروع کادر متنی
-        "y_position": 50, # مختصات Y
+        "x_position": 1150, # مختصات X (برای چینش RTL)
+        "y_position": 50,    # مختصات Y
         "font_size": 48,
-        "box_width": 1000, # عرض کادر متنی (برای محاسبه چینش راست به چپ)
         "color": "navy"
     },
     "dest": {
         "text_prefix": "مقصد: ",
-        "x_start": 150,
+        "x_position": 1150,
         "y_position": 150,
-        "font_size": 55, # مثال: فونت بزرگتر برای خط دوم
-        "box_width": 1000,
-        "color": "black"
+        "font_size": 48, 
+        "color": "navy"
     },
     "product": {
         "text_prefix": "نوع فرآورده: ",
-        "x_start": 150,
+        "x_position": 1150,
         "y_position": 250,
         "font_size": 48,
-        "box_width": 1000,
-        "color": "#333333" # استفاده از کد رنگ
+        "color": "navy"
     }
 }
+# توجه: x_position در اینجا نقطه مرجع راست متن است.
 
 # =========================================================================
 # 🤖 منطق ربات
@@ -65,24 +62,17 @@ LINE_CONFIGS = {
 # مراحل گفتگو
 DATE, DEST, PRODUCT = range(3)
 
-# --- تابع کمکی برای نوشتن راست به چپ با قابلیت اتصال حروف ---
-def draw_text_rtl(draw, position, text, font, fill, box_width):
+# --- تابع کمکی برای نوشتن راست به چپ (اصلی شما) ---
+def draw_text_rtl(draw, position, text, font, fill):
     """
-    متن فارسی را ابتدا reshaped (اتصال حروف) و سپس Bidi (چینش راست به چپ) کرده و روی تصویر می‌کشد.
+    متن را بر اساس موقعیت X (که نقطه راست متن است) چینش راست به چپ می‌کند.
     """
-    # ۱. اتصال حروف فارسی (Reshape)
-    reshaped_text = arabic_reshaper.reshape(text)
-    # ۲. چینش راست به چپ (Bidi)
-    bidi_text = get_display(reshaped_text)
-
-    # محاسبه عرض متن برای متن Bidi شده
-    text_width = draw.textlength(bidi_text, font=font)
-    # نقطه شروع از سمت راست باکس تعیین شده
+    # محاسبه عرض متن
+    text_width = draw.textlength(text, font=font)
+    # نقطه شروع نگارش (X اصلی - عرض متن)
     x, y = position
-    
-    # توجه: نگارش از نقطه (x_start + box_width - text_width) انجام می‌شود 
-    # تا متن در عرض 'box_width' از سمت راست تراز شود.
-    draw.text((x + box_width - text_width, y), bidi_text, font=font, fill=fill)
+    draw.text((x - text_width, y), text, font=font, fill=fill)
+
 
 # شروع ربات
 async def start(update: Update, context):
@@ -130,11 +120,10 @@ async def get_product(update: Update, context):
         text_date = f"{config_date['text_prefix']}{context.user_data['date']}"
         draw_text_rtl(
             draw, 
-            (config_date['x_start'], config_date['y_position']), 
+            (config_date['x_position'], config_date['y_position']), 
             text_date, 
             font_date, 
-            config_date['color'], 
-            config_date['box_width']
+            config_date['color']
         )
         
         # 2. درج مقصد
@@ -143,11 +132,10 @@ async def get_product(update: Update, context):
         text_dest = f"{config_dest['text_prefix']}{context.user_data['dest']}"
         draw_text_rtl(
             draw, 
-            (config_dest['x_start'], config_dest['y_position']), 
+            (config_dest['x_position'], config_dest['y_position']), 
             text_dest, 
             font_dest, 
-            config_dest['color'], 
-            config_dest['box_width']
+            config_dest['color']
         )
         
         # 3. درج فرآورده
@@ -156,11 +144,10 @@ async def get_product(update: Update, context):
         text_product = f"{config_product['text_prefix']}{context.user_data['product']}"
         draw_text_rtl(
             draw, 
-            (config_product['x_start'], config_product['y_position']), 
+            (config_product['x_position'], config_product['y_position']), 
             text_product, 
             font_product, 
-            config_product['color'], 
-            config_product['box_width']
+            config_product['color']
         )
 
         output_path = "output.jpg"
